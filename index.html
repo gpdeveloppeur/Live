@@ -297,7 +297,8 @@ select option{background:#15151d;color:#f5f3ff}
     <div class="rline" id="rprepline"><select id="rprep" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);font:inherit;font-weight:600"></select><button type="button" data-act="chalp">GO</button></div>
     <div class="rg">
       <button type="button" data-act="flip"><span>🔄</span>Inverser caméra</button>
-      <button type="button" data-act="close"><span>▾</span>Fermer régie</button>
+      <button type="button" data-act="fit" id="rfit"><span>🖼</span>Cadrage : plein</button>
+      <button type="button" class="full" data-act="close"><span>▾</span>Fermer régie</button>
       <button type="button" class="danger full" data-act="reveal"><span>🎬</span>RÉVÉLER — fin du prank</button>
     </div>
   </div>
@@ -338,6 +339,8 @@ const av=(u,cls="")=>`<div class="avatar ${cls}" style="background:${u.c}">${u.i
 
 /* ---------- state ---------- */
 let S=null,timers=[],camStream=null,facing="user";
+let fit="cover";try{fit=localStorage.getItem("fauxlive.fit")||"cover"}catch(e){}
+function applyFit(){$("#cam").style.objectFit=fit;const b=$("#rfit");if(b)b.innerHTML=fit==="cover"?"<span>🖼</span>Cadrage : plein":"<span>🖼</span>Cadrage : entier"}
 let selTheme="street";
 
 /* ---------- setup ui ---------- */
@@ -411,8 +414,15 @@ async function openCam(){
   v.srcObject=null;nc.classList.remove("on");
   if(facing==="none"||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){nc.classList.add("on");return}
   try{
-    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1920}},audio:false});
+    const portrait=window.innerHeight>=window.innerWidth;
+    const want={facingMode:facing,aspectRatio:{ideal:portrait?9/16:16/9},width:{ideal:portrait?720:1280},height:{ideal:portrait?1280:720}};
+    try{camStream=await navigator.mediaDevices.getUserMedia({video:want,audio:false})}
+    catch(e1){camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing},audio:false})}
     v.srcObject=camStream;v.classList.toggle("mirror",facing==="user");
+    // zoom matériel au minimum si le téléphone l'expose (Android surtout)
+    try{const tr=camStream.getVideoTracks()[0];const cap=tr.getCapabilities?tr.getCapabilities():{};
+      if(cap.zoom&&typeof cap.zoom.min==="number")await tr.applyConstraints({advanced:[{zoom:cap.zoom.min}]})}catch(e2){}
+    applyFit();
   }catch(e){nc.classList.add("on");nc.querySelector("div").innerHTML=`<div class="big">NO CAM</div>Caméra refusée ou indisponible.<br>Ouvre le fichier en HTTPS ou en local sur le téléphone.`}
 }
 
@@ -509,6 +519,7 @@ $("#regie").addEventListener("click",e=>{
   else if(a==="chalc"){const t=$("#rchal").value.trim();if(t){launchChal(t);$("#rchal").value=""}regie(false)}
   else if(a==="chalp"){const i=+$("#rprep").value;if(S.custom&&S.custom[i]){launchChal(S.custom[i]);regie(false)}}
   else if(a==="flip"){facing=facing==="user"?"environment":"user";openCam()}
+  else if(a==="fit"){fit=fit==="cover"?"contain":"cover";try{localStorage.setItem("fauxlive.fit",fit)}catch(e){}applyFit()}
   else if(a==="close")regie(false);
   else if(a==="reveal"){regie(false);S.paused=true;$("#reveal").classList.add("on")}
 });
