@@ -179,7 +179,7 @@ select option{background:#15151d;color:#f5f3ff}
 
 <!-- ================= SETUP ================= -->
 <section id="setup">
-  <h1>FAUX<span>LIVE</span> <small style="font:600 12px var(--font-ui);color:var(--fg-dim);letter-spacing:.05em;vertical-align:top">v1.3</small></h1>
+  <h1>FAUX<span>LIVE</span> <small style="font:600 12px var(--font-ui);color:var(--fg-dim);letter-spacing:.05em;vertical-align:top">v1.4</small></h1>
   <p class="sub">Simulateur de live pour prank. Les spectateurs, commentaires et cadeaux sont générés localement. Personne ne regarde.</p>
 
   <div class="field">
@@ -292,6 +292,8 @@ select option{background:#15151d;color:#f5f3ff}
       <button type="button" data-act="hype"><span>🔥</span>Hype dans le chat</button>
       <button type="button" data-act="pause" id="rpause"><span>⏸</span>Pause flux</button>
     </div>
+    <div class="rline"><select id="rcam" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);font:inherit;font-weight:600"><option value="">Auto</option></select><select id="rres" style="width:92px;border:1px solid var(--line);border-radius:10px;padding:10px 8px;color:var(--fg);font:inherit;font-weight:600"><option value="auto">Auto</option><option value="480">480p</option><option value="720">720p</option><option value="1080">1080p</option></select></div>
+    <div class="rstat" style="margin-top:-2px"><span id="rcaminfo">—</span></div>
     <div class="toggle"><span>🔍 Cadrage caméra : <b id="rzoomv">plein</b></span><input type="range" id="rzoom" min="0" max="100" value="100" style="flex:1;margin-left:12px;accent-color:var(--accent)"></div>
     <div class="rline"><input id="rtxt" placeholder="Commentaire perso (envoyé par un faux spectateur)"><button type="button" data-act="say">OK</button></div>
     <div class="rline"><input id="rchal" placeholder="Défi perso : ex. « Chante le refrain »"><button type="button" data-act="chalc">GO</button></div>
@@ -340,6 +342,15 @@ const av=(u,cls="")=>`<div class="avatar ${cls}" style="background:${u.c}">${u.i
 /* ---------- state ---------- */
 let S=null,timers=[],camStream=null,facing="user";
 let zoom=1;try{const z=localStorage.getItem("fauxlive.zoom");if(z!==null)zoom=+z}catch(e){}
+let camDev="",camRes="auto";try{camDev=localStorage.getItem("fauxlive.dev")||"";camRes=localStorage.getItem("fauxlive.res")||"auto"}catch(e){}
+async function listCams(){
+  const sel=$("#rcam");if(!sel||!navigator.mediaDevices||!navigator.mediaDevices.enumerateDevices)return;
+  try{
+    const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==="videoinput");
+    sel.innerHTML='<option value="">Auto (frontale/arrière)</option>'+devs.map((d,i)=>`<option value="${d.deviceId}">${esc(d.label||("Caméra "+(i+1)))}</option>`).join("");
+    sel.value=camDev;if(sel.value!==camDev){camDev="";sel.value=""}
+  }catch(e){}
+}
 /* zoom 0 = image entière (contain), 1 = plein écran (équivalent cover), interpolation par scale CSS */
 function applyFit(){
   const v=$("#cam");v.style.objectFit="contain";
@@ -425,14 +436,20 @@ async function openCam(){
   v.srcObject=null;nc.classList.remove("on");
   if(facing==="none"||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){nc.classList.add("on");return}
   try{
-    const portrait=window.innerHeight>=window.innerWidth;
-    const want={facingMode:facing,aspectRatio:{ideal:portrait?9/16:16/9},width:{ideal:portrait?720:1280},height:{ideal:portrait?1280:720}};
+    // Pas de contrainte de ratio : certains Android la satisfont en rognant le capteur (= zoom numérique).
+    const want=camDev?{deviceId:{exact:camDev}}:{facingMode:facing};
+    const RES={auto:null,"480":{width:{ideal:640},height:{ideal:480}},"720":{width:{ideal:1280},height:{ideal:720}},"1080":{width:{ideal:1920},height:{ideal:1080}}};
+    if(RES[camRes])Object.assign(want,RES[camRes]);
     try{camStream=await navigator.mediaDevices.getUserMedia({video:want,audio:false})}
     catch(e1){camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing},audio:false})}
     v.srcObject=camStream;
+    const tr=camStream.getVideoTracks()[0];
     // zoom matériel au minimum si le téléphone l'expose (Android surtout)
-    try{const tr=camStream.getVideoTracks()[0];const cap=tr.getCapabilities?tr.getCapabilities():{};
+    try{const cap=tr.getCapabilities?tr.getCapabilities():{};
       if(cap.zoom&&typeof cap.zoom.min==="number")await tr.applyConstraints({advanced:[{zoom:cap.zoom.min}]})}catch(e2){}
+    const st=tr.getSettings?tr.getSettings():{};
+    const ci=$("#rcaminfo");if(ci)ci.textContent=`${tr.label||"caméra"} · ${st.width||"?"}×${st.height||"?"}`+(st.zoom?` · zoom ${st.zoom}`:"");
+    listCams();
     applyFit();
   }catch(e){nc.classList.add("on");nc.querySelector("div").innerHTML=`<div class="big">NO CAM</div>Caméra refusée ou indisponible.<br>Ouvre le fichier en HTTPS ou en local sur le téléphone.`}
 }
@@ -517,6 +534,9 @@ function launchChal(item){
 let taps=[];
 $("#corner").addEventListener("click",()=>{const n=Date.now();taps=taps.filter(t=>n-t<700);taps.push(n);if(taps.length>=3){taps=[];regie(true)}});
 function regie(on){$("#regie").classList.toggle("on",on)}
+$("#rcam").addEventListener("change",e=>{camDev=e.target.value;try{localStorage.setItem("fauxlive.dev",camDev)}catch(x){}if(S)openCam()});
+$("#rres").addEventListener("change",e=>{camRes=e.target.value;try{localStorage.setItem("fauxlive.res",camRes)}catch(x){}if(S)openCam()});
+try{$("#rres").value=camRes}catch(e){}
 $("#rzoom").addEventListener("input",e=>{zoom=+e.target.value/100;try{localStorage.setItem("fauxlive.zoom",zoom)}catch(x){}applyFit()});
 $("#regie").addEventListener("click",e=>{
   const b=e.target.closest("button[data-act]");if(!b||!S)return;
@@ -530,7 +550,7 @@ $("#regie").addEventListener("click",e=>{
   else if(a==="say"){const t=$("#rtxt").value.trim();if(t){spawnMsg(null,t);$("#rtxt").value=""}regie(false)}
   else if(a==="chalc"){const t=$("#rchal").value.trim();if(t){launchChal(t);$("#rchal").value=""}regie(false)}
   else if(a==="chalp"){const i=+$("#rprep").value;if(S.custom&&S.custom[i]){launchChal(S.custom[i]);regie(false)}}
-  else if(a==="flip"){facing=facing==="user"?"environment":"user";openCam()}
+  else if(a==="flip"){facing=facing==="user"?"environment":"user";camDev="";try{localStorage.setItem("fauxlive.dev","")}catch(x){}openCam()}
   else if(a==="close")regie(false);
   else if(a==="reveal"){regie(false);S.paused=true;$("#reveal").classList.add("on")}
 });
