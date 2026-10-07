@@ -179,7 +179,7 @@ select option{background:#15151d;color:#f5f3ff}
 
 <!-- ================= SETUP ================= -->
 <section id="setup">
-  <h1>FAUX<span>LIVE</span> <small style="font:600 12px var(--font-ui);color:var(--fg-dim);letter-spacing:.05em;vertical-align:top">v1.4</small></h1>
+  <h1>FAUX<span>LIVE</span> <small style="font:600 12px var(--font-ui);color:var(--fg-dim);letter-spacing:.05em;vertical-align:top">v1.5</small></h1>
   <p class="sub">Simulateur de live pour prank. Les spectateurs, commentaires et cadeaux sont générés localement. Personne ne regarde.</p>
 
   <div class="field">
@@ -200,6 +200,10 @@ select option{background:#15151d;color:#f5f3ff}
       <button type="button" class="add" id="addprep">+ Ajouter un défi</button>
     </div>
     <div class="toggle"><span>Mélanger avec les défis du thème</span><input type="checkbox" id="mixtheme" checked></div>
+    <div class="row2">
+      <div class="field" style="margin-bottom:0"><label for="chaldur">Durée d'un défi (s)</label><input type="number" id="chaldur" value="60" min="10" max="600" inputmode="numeric"></div>
+      <div class="field" style="margin-bottom:0"><label for="chalgap">Délai entre deux (s)</label><input type="number" id="chalgap" value="60" min="5" max="1800" inputmode="numeric"></div>
+    </div>
   </div>
 
   <div class="row2">
@@ -393,7 +397,8 @@ function renderPrep(){
     w.appendChild(r);
   });
 }
-$("#addprep").onclick=()=>{PREP.push({t:"",e:"🎁",q:10});savePrep();renderPrep();const last=$("#prows").lastElementChild;if(last)last.firstElementChild.focus()};
+$("#addprep").onclick=()=>{PREP.push({t:"",e:"🎁",q:10});savePrep();renderPrep();
+for(const k of ["chaldur","chalgap"]){try{const v=localStorage.getItem("fauxlive."+k);if(v)$("#"+k).value=v}catch(e){}$("#"+k).addEventListener("change",e=>{try{localStorage.setItem("fauxlive."+k,e.target.value)}catch(x){}})}const last=$("#prows").lastElementChild;if(last)last.firstElementChild.focus()};
 try{$("#mixtheme").checked=localStorage.getItem("fauxlive.mix")!=="0"}catch(e){}
 $("#mixtheme").onchange=()=>{try{localStorage.setItem("fauxlive.mix",$("#mixtheme").checked?"1":"0")}catch(e){}};
 renderPrep();
@@ -407,7 +412,7 @@ async function start(){
   const host=($("#hostname").value.trim()||"streamer").slice(0,24);
   try{localStorage.setItem("fauxlive.host",host)}catch(e){}
   const base=+$("#base").value, rate=+$("#rythme").value;
-  S={host,theme:THEMES[selTheme],base,rate,viewers:Math.round(base*rnd(.55,.7)),target:base,likes:ri(800,4000),msgs:0,gifts:0,paused:false,chalIdx:0,t0:Date.now(),spike:0,chalTimer:null};
+  S={host,theme:THEMES[selTheme],base,rate,chalDur:Math.max(10,+$("#chaldur").value||60),chalGap:Math.max(5,+$("#chalgap").value||60),chalEnd:Date.now()-45000,viewers:Math.round(base*rnd(.55,.7)),target:base,likes:ri(800,4000),msgs:0,gifts:0,paused:false,chalIdx:0,t0:Date.now(),spike:0,chalTimer:null};
   $("#hostn").textContent=host;$("#hostav").textContent=host[0].toUpperCase();
   $("#feed").innerHTML="";$("#gifts").innerHTML="";$("#chal").classList.remove("on");$("#reveal").classList.remove("on");
   $("#tops").innerHTML=[0,1,2].map(i=>av(POOL[i])).join("");
@@ -467,7 +472,11 @@ function schedule(){
   // joins
   (function jt(){if(!S)return;if(!S.paused)joinMsg();later(jt,rnd(4000,12000)/S.rate)})();
   // auto challenges
-  (function ct(){if(!S)return;if(!S.paused&&!$("#chal").classList.contains("on"))launchChal();later(ct,rnd(45000,90000))})();
+  // défis auto : attend que le précédent soit fini + le délai réglé (±20 %)
+  (function ct(){if(!S)return;
+    const on=$("#chal").classList.contains("on");
+    if(!S.paused&&!on&&Date.now()-S.chalEnd>=S.chalGap*1000*rnd(.8,1.2))launchChal();
+    later(ct,1000)})();
   // clock
   (function kt(){if(!S)return;const s=Math.floor((Date.now()-S.t0)/1000);$("#rclock").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");later(kt,1000)})();
 }
@@ -523,8 +532,8 @@ function launchChal(item){
   const c=item.q||ri(1,5)*10;
   $("#chaltxt").textContent=text;$("#chalby").textContent=`par @${u.n} · ${ge} ${gn} ×${c} si c'est fait`;
   const el=$("#chal");el.classList.add("on");
-  const bar=$("#chalbar");bar.style.transition="none";bar.style.transform="scaleX(1)";void bar.offsetWidth;bar.style.transition="transform 60s linear";bar.style.transform="scaleX(0)";
-  if(S.chalTimer)clearTimeout(S.chalTimer);S.chalTimer=setTimeout(()=>el.classList.remove("on"),60000);
+  const bar=$("#chalbar");bar.style.transition="none";bar.style.transform="scaleX(1)";void bar.offsetWidth;bar.style.transition=`transform ${S.chalDur}s linear`;bar.style.transform="scaleX(0)";
+  if(S.chalTimer)clearTimeout(S.chalTimer);S.chalTimer=setTimeout(()=>{el.classList.remove("on");S.chalEnd=Date.now()},S.chalDur*1000);
   sysMsg("🎯 Nouveau défi : "+text);
   const hype=["FAIS LE","go go go","on veut voir","il/elle doit le faire","DÉFI DÉFI","mdr le défi","j'ajoute 10 roses si c fait","jamais il/elle fait ça","allez courage","le chat vote OUI"];
   for(let i=0;i<6;i++)later(()=>spawnMsg(null,pick(hype)),rnd(500,5000));
