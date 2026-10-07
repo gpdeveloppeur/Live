@@ -97,7 +97,7 @@ select option{background:#15151d;color:#f5f3ff}
 /* challenge card */
 #chal{position:absolute;left:12px;right:12px;top:calc(92px + env(safe-area-inset-top,0px));background:var(--glass-strong);backdrop-filter:blur(14px);border:1px solid rgba(255,176,46,.5);border-radius:14px;padding:10px 12px;display:none;gap:10px;align-items:center;transform:translateY(-8px);opacity:0;transition:.25s}
 #chal.on{display:flex;transform:none;opacity:1}
-#chal .ic{font-size:28px;flex:none}
+#chal .ic{font-size:28px;flex:none;display:flex}#chal .ic .avatar{width:36px;height:36px;font-size:15px}
 #chal .t{min-width:0;flex:1}
 #chal .t small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:800}
 #chal .t b{display:block;font-size:15px;line-height:1.25}
@@ -179,7 +179,7 @@ select option{background:#15151d;color:#f5f3ff}
 
 <!-- ================= SETUP ================= -->
 <section id="setup">
-  <h1>FAUX<span>LIVE</span> <small style="font:600 12px var(--font-ui);color:var(--fg-dim);letter-spacing:.05em;vertical-align:top">v1.5</small></h1>
+  <h1>FAUX<span>LIVE</span> <small style="font:600 12px var(--font-ui);color:var(--fg-dim);letter-spacing:.05em;vertical-align:top">v1.6</small></h1>
   <p class="sub">Simulateur de live pour prank. Les spectateurs, commentaires et cadeaux sont générés localement. Personne ne regarde.</p>
 
   <div class="field">
@@ -193,15 +193,23 @@ select option{background:#15151d;color:#f5f3ff}
   </div>
 
   <div class="field">
-    <label>Tes défis / questions préparés</label>
+    <label>Mode du live</label>
+    <div class="seg" id="modeseg">
+      <button type="button" data-mode="defi" aria-pressed="true">🎯 Défis du chat</button>
+      <button type="button" data-mode="q" aria-pressed="false">❓ Questions des viewers</button>
+    </div>
+  </div>
+
+  <div class="field">
+    <label id="preplabel">Tes défis préparés</label>
     <div class="prep" id="prep">
-      <div class="phead"><span>Défi ou question</span><span>Cadeau</span><span>Qté</span><span></span></div>
+      <div class="phead"><span id="prephead">Défi</span><span>Cadeau</span><span>Qté</span><span></span></div>
       <div id="prows"></div>
       <button type="button" class="add" id="addprep">+ Ajouter un défi</button>
     </div>
-    <div class="toggle"><span>Mélanger avec les défis du thème</span><input type="checkbox" id="mixtheme" checked></div>
+    <div class="toggle"><span id="mixlabel">Mélanger avec les défis du thème</span><input type="checkbox" id="mixtheme" checked></div>
     <div class="row2">
-      <div class="field" style="margin-bottom:0"><label for="chaldur">Durée d'un défi (s)</label><input type="number" id="chaldur" value="60" min="10" max="600" inputmode="numeric"></div>
+      <div class="field" style="margin-bottom:0"><label for="chaldur" id="chaldurl">Durée d'un défi (s)</label><input type="number" id="chaldur" value="60" min="10" max="600" inputmode="numeric"></div>
       <div class="field" style="margin-bottom:0"><label for="chalgap">Délai entre deux (s)</label><input type="number" id="chalgap" value="60" min="5" max="1800" inputmode="numeric"></div>
     </div>
   </div>
@@ -261,7 +269,7 @@ select option{background:#15151d;color:#f5f3ff}
   <button id="corner" type="button" aria-label="Régie"></button>
   <div id="tops"></div>
 
-  <div id="chal"><div class="ic">🎯</div><div class="t"><small>Défi lancé</small><b id="chaltxt"></b><span id="chalby"></span></div><div class="bar" id="chalbar"></div></div>
+  <div id="chal"><div class="ic" id="chalic">🎯</div><div class="t"><small id="chaltag">Défi lancé</small><b id="chaltxt"></b><span id="chalby"></span></div><div class="bar" id="chalbar"></div></div>
 
   <div id="gifts"></div>
   <div id="feed"></div>
@@ -291,7 +299,7 @@ select option{background:#15151d;color:#f5f3ff}
     <div class="rg">
       <button type="button" data-act="big"><span>🦁</span>Gros cadeau</button>
       <button type="button" data-act="spike"><span>📈</span>Pic de spectateurs</button>
-      <button type="button" data-act="chal"><span>🎯</span>Défi suivant</button>
+      <button type="button" data-act="chal"><span>🎯</span><span id="rnext">Défi suivant</span></button>
       <button type="button" data-act="rain"><span>🌧</span>Pluie de cadeaux</button>
       <button type="button" data-act="hype"><span>🔥</span>Hype dans le chat</button>
       <button type="button" data-act="pause" id="rpause"><span>⏸</span>Pause flux</button>
@@ -300,7 +308,7 @@ select option{background:#15151d;color:#f5f3ff}
     <div class="rstat" style="margin-top:-2px"><span id="rcaminfo">—</span></div>
     <div class="toggle"><span>🔍 Cadrage caméra : <b id="rzoomv">plein</b></span><input type="range" id="rzoom" min="0" max="100" value="100" style="flex:1;margin-left:12px;accent-color:var(--accent)"></div>
     <div class="rline"><input id="rtxt" placeholder="Commentaire perso (envoyé par un faux spectateur)"><button type="button" data-act="say">OK</button></div>
-    <div class="rline"><input id="rchal" placeholder="Défi perso : ex. « Chante le refrain »"><button type="button" data-act="chalc">GO</button></div>
+    <div class="rline"><input id="rchal" placeholder="Défi ou question perso"><button type="button" data-act="chalc">GO</button></div>
     <div class="rline" id="rprepline"><select id="rprep" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);font:inherit;font-weight:600"></select><button type="button" data-act="chalp">GO</button></div>
     <div class="rg">
       <button type="button" data-act="flip"><span>🔄</span>Inverser caméra</button>
@@ -323,12 +331,15 @@ const fmt=n=>n>=1e6?(n/1e6).toFixed(1).replace('.0','')+'M':n>=1000?(n/1000).toF
 const THEMES={
   street:{ic:"🎤",name:"Street",desc:"Micro-trottoir, humour, rencontres",
     msgs:["mdrrr","il est où là ?","{h} t'es dans quelle ville ?","le mec derrière 😂","fais lui une interview","demande lui son signe astro","PTDRRR","trop drôle ce live","je regarde depuis Lyon 🙌","c'est qui à côté de toi ??","gooo","on veut la suite","{h} best streamer fr","ta tête mdr","jsuis mort","mais il fait quoi là","la personne à côté est trop calme","fais le quizz !!","QUESTION PIÈGE","ça rend bien le fond","salut de Montréal","il/elle a l'air sympa","montre le ciel","toujours aussi fou ce live","y'a du monde ce soir","1er live que je regarde en entier","donne lui le micro","LE SOURIRE 😭","ok ça part en vrille","fais une blague","ptdr le regard","vas-y présente nous","on l'adore déjà","oh il/elle est chou"],
+    qs:["C'est qui à côté de toi ??","Vous vous connaissez ?","T'es dans quelle ville là ?","Il/elle est célibataire ? 👀","C'est quoi son prénom ?","Vous faites quoi ce soir ?","Demande lui son resto préféré","Son signe astro ?","Chien ou chat ?","Il/elle te trouve comment ?"],
     chals:["Fais une interview express : 3 questions","Demande son plat préféré","Fais une blague nulle, et il/elle doit noter sur 10","Fais lui deviner ton âge","Imitez un animal ensemble","Chante 5 secondes de n'importe quoi","Demande son conseil de vie","Fais un check compliqué","Raconte ton pire râteau en 20 sec","Faites un selfie pour le chat"]},
   sport:{ic:"🏋️",name:"Sport",desc:"Défis physiques, chrono, perf",
     msgs:["ALLEZ","chrono !!","10 pompes go","il/elle tient pas 30 sec","{h} t'es chaud","on veut voir les squats","respire mdr","PAS DE TRICHE","le gainage ou rien","force 💪","je fais le défi en même temps","trop fort","le coach approuve","hydrate toi","{h} forme olympique","encore 5","montre la technique","ça c'est du sport","elle/il va gagner c sûr","t'as vu le chrono ??","plus vite","OUAIS","les abdos sont là","pause ?? jamais","lol le visage","go go go","record du live ?","le dernier était mieux","mdr la pose","on bat le record ce soir"],
+    qs:["Tu fais combien de pompes d'affilée ?","Il/elle fait du sport ?","Ton record au 5 km ?","Salle ou extérieur ?","Tu t'entraînes combien de fois par semaine ?","Son sport préféré ?","Qui gagne entre vous deux au bras de fer ?","Ton pire souvenir de sport ?"],
     chals:["10 pompes en moins de 15 sec","Gainage 30 secondes, à deux","Squat challenge : qui tient le plus","Équilibre sur un pied, yeux fermés, 20 sec","Course sur place 30 sec à fond","Fais 5 burpees","Jumping jacks jusqu'au stop du chat","Tenir une chaise invisible 40 sec","Pose de bodybuilder la plus ridicule","Lance quelque chose et rattrape-le 3 fois"]},
   talk:{ic:"💬",name:"Talk",desc:"Questions, débats, Q&A",
     msgs:["bonne question","vrai","pas d'accord mdr","{h} ton avis ?","on veut la réponse honnête","réponse en 1 mot","c'est profond là","mdr la gêne","dit lui tout","team pizza","team ananas 🍍 fight","TOP 3 ?","depuis Bruxelles 👋","le silence 😭","oh il/elle réfléchit","on veut l'anecdote","ok respect","jamais vu ça","elle/il a raison","fais le quiz culture G","{h} tu lis le chat ?","hahaha","question suivante","pas de langue de bois","ça débat ici","meilleur film ?","le pire date de ta vie","intéressant","on apprend des trucs","100% d'accord"],
+    qs:["Ta plus grosse honte ?","Ananas sur la pizza, oui ou non ?","Dernier film vu ?","Plutôt mer ou montagne ?","Ton rêve de gosse ?","Le truc que personne ne sait sur toi ?","Un conseil à ton toi de 15 ans ?","Tu crois aux signes astro ?"],
     chals:["Réponds à 3 questions rapides sans réfléchir","Dis une chose que personne ne sait sur toi","Débat 30 sec : ananas sur pizza","Devine son métier en 3 questions","Donne un compliment sincère","Raconte ta pire gaffe","Chacun donne son top 3 films","Décris ta journée idéale en 15 sec","Quelle est ta plus grande peur ?","Fais lui deviner un mot sans le dire"]}
 };
 const GIFTS=[
@@ -375,17 +386,25 @@ for(const k in THEMES){const t=THEMES[k];const b=document.createElement("button"
 $("#camseg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;facing=b.dataset.cam;[...$("#camseg").children].forEach(c=>c.setAttribute("aria-pressed",c===b))});
 try{const saved=localStorage.getItem("fauxlive.host");if(saved)$("#hostname").value=saved}catch(e){}
 
-/* ---------- défis préparés ---------- */
-let PREP=[];
-try{PREP=JSON.parse(localStorage.getItem("fauxlive.prep")||"[]")}catch(e){PREP=[]}
-if(!Array.isArray(PREP))PREP=[];
-if(!PREP.length)PREP=[{t:"Demande son prénom et son signe astro",e:"🌹",q:20},{t:"Fais un check compliqué à deux",e:"🚀",q:5}];
-function savePrep(){try{localStorage.setItem("fauxlive.prep",JSON.stringify(PREP))}catch(e){}}
+/* ---------- mode & listes préparées ---------- */
+let mode="defi";try{mode=localStorage.getItem("fauxlive.mode")||"defi"}catch(e){}
+const PREPS={defi:[],q:[]};
+for(const m of ["defi","q"]){try{PREPS[m]=JSON.parse(localStorage.getItem(m==="defi"?"fauxlive.prep":"fauxlive.prepq")||"[]")}catch(e){}if(!Array.isArray(PREPS[m]))PREPS[m]=[]}
+if(!PREPS.defi.length)PREPS.defi=[{t:"Demande son prénom et son signe astro",e:"🌹",q:20},{t:"Fais un check compliqué à deux",e:"🚀",q:5}];
+if(!PREPS.q.length)PREPS.q=[{t:"C'est qui la personne à côté de toi ?",e:"🌹",q:10},{t:"Vous vous connaissez depuis quand ?",e:"🚀",q:3}];
+let PREP=PREPS[mode];
+function savePrep(){try{localStorage.setItem(mode==="defi"?"fauxlive.prep":"fauxlive.prepq",JSON.stringify(PREP))}catch(e){}}
 function renderPrep(){
   const w=$("#prows");w.innerHTML="";
+  const isQ=mode==="q";
+  $("#preplabel").textContent=isQ?"Tes questions de viewers préparées":"Tes défis préparés";
+  $("#prephead").textContent=isQ?"Question posée par un viewer":"Défi";
+  $("#addprep").textContent=isQ?"+ Ajouter une question":"+ Ajouter un défi";
+  $("#mixlabel").textContent=isQ?"Mélanger avec les questions du thème":"Mélanger avec les défis du thème";
+  $("#chaldurl").textContent=isQ?"Durée d'une question (s)":"Durée d'un défi (s)";
   PREP.forEach((p,i)=>{
     const r=document.createElement("div");r.className="prow";
-    r.innerHTML=`<input type="text" value="${esc(p.t)}" placeholder="Ex. Chante le refrain" maxlength="80" aria-label="Défi ${i+1}">
+    r.innerHTML=`<input type="text" value="${esc(p.t)}" placeholder="${isQ?"Ex. Tu es célibataire ?":"Ex. Chante le refrain"}" maxlength="90" aria-label="${isQ?"Question":"Défi"} ${i+1}">
       <input type="text" class="em" value="${esc(p.e)}" maxlength="4" aria-label="Emoji cadeau">
       <input type="number" class="qt" value="${+p.q||1}" min="1" max="9999" inputmode="numeric" aria-label="Quantité">
       <button type="button" class="del" aria-label="Supprimer">×</button>`;
@@ -397,8 +416,10 @@ function renderPrep(){
     w.appendChild(r);
   });
 }
-$("#addprep").onclick=()=>{PREP.push({t:"",e:"🎁",q:10});savePrep();renderPrep();
-for(const k of ["chaldur","chalgap"]){try{const v=localStorage.getItem("fauxlive."+k);if(v)$("#"+k).value=v}catch(e){}$("#"+k).addEventListener("change",e=>{try{localStorage.setItem("fauxlive."+k,e.target.value)}catch(x){}})}const last=$("#prows").lastElementChild;if(last)last.firstElementChild.focus()};
+$("#addprep").onclick=()=>{PREP.push({t:"",e:"🎁",q:10});savePrep();renderPrep();const last=$("#prows").lastElementChild;if(last)last.firstElementChild.focus()};
+$("#modeseg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;mode=b.dataset.mode;PREP=PREPS[mode];try{localStorage.setItem("fauxlive.mode",mode)}catch(x){}[...$("#modeseg").children].forEach(c=>c.setAttribute("aria-pressed",c===b));renderPrep()});
+[...$("#modeseg").children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.mode===mode));
+for(const k of ["chaldur","chalgap"]){try{const v=localStorage.getItem("fauxlive."+k);if(v)$("#"+k).value=v}catch(e){}$("#"+k).addEventListener("change",e=>{try{localStorage.setItem("fauxlive."+k,e.target.value)}catch(x){}})}
 try{$("#mixtheme").checked=localStorage.getItem("fauxlive.mix")!=="0"}catch(e){}
 $("#mixtheme").onchange=()=>{try{localStorage.setItem("fauxlive.mix",$("#mixtheme").checked?"1":"0")}catch(e){}};
 renderPrep();
@@ -418,7 +439,8 @@ async function start(){
   $("#tops").innerHTML=[0,1,2].map(i=>av(POOL[i])).join("");
   // file de défis : préparés d'abord, puis ceux du thème si demandé
   const custom=PREP.filter(p=>p.t.trim()).map(p=>({t:p.t.trim(),e:p.e||"🎁",q:+p.q||1}));
-  const themed=$("#mixtheme").checked?S.theme.chals.map(t=>({t})):[];
+  const themed=$("#mixtheme").checked?(mode==="q"?S.theme.qs:S.theme.chals).map(t=>({t})):[];
+  S.mode=mode;$("#rnext").textContent=mode==="q"?"Question suivante":"Défi suivant";
   S.queue=custom.concat(themed);
   const sel=$("#rprep");sel.innerHTML=custom.length?custom.map((c,i)=>`<option value="${i}">${c.e} ×${c.q} · ${esc(c.t)}</option>`).join(""):'<option value="">Aucun défi préparé</option>';
   $("#rprepline").style.display=custom.length?"":"none";
@@ -526,17 +548,27 @@ function launchChal(item){
   const u=pick(POOL);
   if(typeof item==="string")item={t:item};
   if(!item){if(!S.queue.length)return;item=S.queue[S.chalIdx++%S.queue.length]}
-  const text=item.t;
+  const text=item.t;const isQ=S.mode==="q";
   const ge=item.e?item.e:pick(GIFTS.filter(x=>x.v>=10)).e;
-  const gn=(GIFTS.find(x=>x.e===ge)||{}).n||"cadeau";
+  const gobj=GIFTS.find(x=>x.e===ge);const gn=gobj?gobj.n:"cadeau";
   const c=item.q||ri(1,5)*10;
-  $("#chaltxt").textContent=text;$("#chalby").textContent=`par @${u.n} · ${ge} ${gn} ×${c} si c'est fait`;
+  $("#chaltag").textContent=isQ?"Question de @"+u.n:"Défi lancé";
+  $("#chalic").innerHTML=isQ?av(u):"🎯";
+  $("#chaltxt").textContent=text;
+  $("#chalby").textContent=isQ?`offre ${ge} ${gn} ×${c} pour ta réponse`:`par @${u.n} · ${ge} ${gn} ×${c} si c'est fait`;
   const el=$("#chal");el.classList.add("on");
   const bar=$("#chalbar");bar.style.transition="none";bar.style.transform="scaleX(1)";void bar.offsetWidth;bar.style.transition=`transform ${S.chalDur}s linear`;bar.style.transform="scaleX(0)";
   if(S.chalTimer)clearTimeout(S.chalTimer);S.chalTimer=setTimeout(()=>{el.classList.remove("on");S.chalEnd=Date.now()},S.chalDur*1000);
-  sysMsg("🎯 Nouveau défi : "+text);
-  const hype=["FAIS LE","go go go","on veut voir","il/elle doit le faire","DÉFI DÉFI","mdr le défi","j'ajoute 10 roses si c fait","jamais il/elle fait ça","allez courage","le chat vote OUI"];
-  for(let i=0;i<6;i++)later(()=>spawnMsg(null,pick(hype)),rnd(500,5000));
+  if(isQ){
+    spawnMsg(u,"❓ "+text);
+    later(()=>spawnGift(gobj||{e:ge,n:gn,v:10},u,c),600);
+    const hype=["bonne question","réponds !!","on veut savoir","mdr la question","+1 "+u.n,"la réponse honnête stp","il/elle rougit 😭","QUESTION PIÈGE","allez balance","le chat attend"];
+    for(let i=0;i<6;i++)later(()=>spawnMsg(null,pick(hype)),rnd(1200,6000));
+  }else{
+    sysMsg("🎯 Nouveau défi : "+text);
+    const hype=["FAIS LE","go go go","on veut voir","il/elle doit le faire","DÉFI DÉFI","mdr le défi","j'ajoute 10 roses si c fait","jamais il/elle fait ça","allez courage","le chat vote OUI"];
+    for(let i=0;i<6;i++)later(()=>spawnMsg(null,pick(hype)),rnd(500,5000));
+  }
 }
 
 /* ---------- régie ---------- */
