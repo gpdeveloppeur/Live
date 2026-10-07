@@ -1,0 +1,517 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>FauxLive</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Bebas+Neue&display=swap">
+<style>
+/* Layout: one-screen portrait overlay. Caméra plein écran, UI live par-dessus, régie en bottom-sheet. Thème unique sombre (écran de live). */
+:root{
+  --bg:#07070a;
+  --fg:#f5f3ff;
+  --fg-dim:rgba(245,243,255,.62);
+  --glass:rgba(10,10,16,.48);
+  --glass-strong:rgba(10,10,16,.82);
+  --line:rgba(255,255,255,.14);
+  --live:#ff2d55;
+  --accent:#ffb02e;
+  --accent-2:#5ee8ff;
+  --ok:#3ddc84;
+  --font-ui:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-display:"Bebas Neue","Oswald","Arial Narrow",sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- Setup ---------- */
+#setup{position:fixed;inset:0;display:flex;flex-direction:column;overflow:auto;padding-block:max(20px,env(safe-area-inset-top,0px)) 28px;padding-inline:20px;background:radial-gradient(120% 60% at 50% -10%,rgba(255,45,85,.35),transparent 60%),var(--bg)}
+#setup h1{font-family:var(--font-display);font-size:56px;line-height:.95;letter-spacing:.02em;margin:8px 0 2px}
+#setup h1 span{color:var(--live)}
+#setup .sub{color:var(--fg-dim);margin:0 0 22px;font-weight:500;max-width:34ch}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-dim);font-weight:700}
+.field input,.field select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--fg);font:inherit;font-weight:600}
+select{color-scheme:dark;background-color:#15151d}
+select option{background:#15151d;color:#f5f3ff}
+/* défis préparés */
+.prep{display:flex;flex-direction:column;gap:8px}
+.prow{display:grid;grid-template-columns:1fr 52px 58px 36px;gap:6px;align-items:center}
+.prow input{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:10px 10px;color:var(--fg);font:inherit;font-weight:600;min-width:0}
+.prow input.em{text-align:center;padding-inline:4px;font-size:18px}
+.prow input.qt{text-align:center;padding-inline:4px}
+.prow .del{border:0;background:rgba(255,45,85,.18);color:var(--live);border-radius:10px;height:40px;font-weight:800;font-size:18px}
+.add{border:1px dashed var(--line);background:transparent;border-radius:10px;padding:10px;font-weight:700;color:var(--fg-dim)}
+.phead{display:grid;grid-template-columns:1fr 52px 58px 36px;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-dim);font-weight:700;text-align:center}
+.phead span:first-child{text-align:left}
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.theme{border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:12px;padding:12px 10px;text-align:left;display:flex;flex-direction:column;gap:4px;min-width:0}
+.theme .ic{font-size:22px}
+.theme b{font-size:14px}
+.theme small{color:var(--fg-dim);font-size:11px;line-height:1.3}
+.theme[aria-pressed="true"]{border-color:var(--accent);background:rgba(255,176,46,.12)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;padding:11px;background:transparent;border:0;font-weight:700}
+.seg button[aria-pressed="true"]{background:rgba(255,255,255,.12)}
+.go{margin-top:8px;width:100%;padding:16px;border:0;border-radius:14px;background:var(--live);color:#fff;font-weight:800;font-size:17px;letter-spacing:.02em}
+.hint{color:var(--fg-dim);font-size:12px;line-height:1.45;margin-top:14px}
+.hint b{color:var(--fg)}
+
+/* ---------- Stage ---------- */
+#stage{position:fixed;inset:0;display:none;background:#000}
+#stage.on{display:block}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+#cam.mirror{transform:scaleX(-1)}
+#nocam{position:absolute;inset:0;display:none;align-items:flex-start;justify-content:center;padding-top:34%;background:
+  radial-gradient(60% 40% at 30% 20%,rgba(94,232,255,.25),transparent 60%),
+  radial-gradient(50% 40% at 80% 80%,rgba(255,45,85,.3),transparent 60%),
+  linear-gradient(180deg,#141424,#06060b)}
+#nocam.on{display:flex}
+#nocam div{text-align:center;color:var(--fg-dim);font-weight:600;max-width:26ch;line-height:1.4}
+#nocam .big{font-family:var(--font-display);font-size:64px;color:rgba(255,255,255,.25);letter-spacing:.04em;line-height:1}
+.shade-top,.shade-bot{position:absolute;left:0;right:0;pointer-events:none}
+.shade-top{top:0;height:150px;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+.shade-bot{bottom:0;height:46%;background:linear-gradient(transparent,rgba(0,0,0,.72))}
+
+/* header */
+#hdr{position:absolute;left:0;right:0;top:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 0;display:flex;align-items:center;gap:8px}
+.host{display:flex;align-items:center;gap:8px;background:var(--glass);backdrop-filter:blur(10px);border-radius:999px;padding:4px 10px 4px 4px;min-width:0}
+.avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;flex:none}
+.host .n{display:flex;flex-direction:column;line-height:1.1;min-width:0}
+.host .n b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.host .n small{font-size:11px;color:var(--fg-dim)}
+.follow{border:0;background:var(--live);color:#fff;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800}
+.pills{margin-left:auto;display:flex;gap:6px;align-items:center}
+.pill{display:flex;align-items:center;gap:5px;border-radius:7px;padding:4px 8px;font-size:12px;font-weight:800;background:var(--glass);backdrop-filter:blur(10px)}
+.pill.live{background:var(--live);color:#fff;letter-spacing:.06em}
+.pill.live::before{content:"";width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+#xbtn{border:0;background:var(--glass);width:32px;height:32px;border-radius:50%;font-size:18px;line-height:1;backdrop-filter:blur(10px)}
+#corner{position:absolute;top:0;left:0;width:90px;height:90px;z-index:5;background:transparent;border:0}
+
+/* top viewers strip */
+#tops{position:absolute;left:12px;top:calc(58px + env(safe-area-inset-top,0px));display:flex;gap:4px}
+#tops .avatar{width:22px;height:22px;font-size:10px;border:1.5px solid rgba(0,0,0,.5)}
+#tops .avatar:nth-child(1){box-shadow:0 0 0 1.5px var(--accent)}
+
+/* challenge card */
+#chal{position:absolute;left:12px;right:12px;top:calc(92px + env(safe-area-inset-top,0px));background:var(--glass-strong);backdrop-filter:blur(14px);border:1px solid rgba(255,176,46,.5);border-radius:14px;padding:10px 12px;display:none;gap:10px;align-items:center;transform:translateY(-8px);opacity:0;transition:.25s}
+#chal.on{display:flex;transform:none;opacity:1}
+#chal .ic{font-size:28px;flex:none}
+#chal .t{min-width:0;flex:1}
+#chal .t small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:800}
+#chal .t b{display:block;font-size:15px;line-height:1.25}
+#chal .t span{font-size:12px;color:var(--fg-dim)}
+#chal .bar{position:absolute;left:12px;right:12px;bottom:0;height:3px;border-radius:3px;background:var(--accent);transform-origin:left;transition:transform linear}
+
+/* gift toasts (left, above feed) */
+#gifts{position:absolute;left:12px;bottom:46%;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.gift{display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,rgba(255,45,85,.85),rgba(255,45,85,.1));border-radius:999px;padding:4px 14px 4px 4px;animation:giftin .3s ease-out;max-width:78vw}
+.gift.mid{background:linear-gradient(90deg,rgba(255,176,46,.9),rgba(255,176,46,.1))}
+.gift .avatar{width:28px;height:28px;font-size:12px}
+.gift .w{display:flex;flex-direction:column;line-height:1.1;min-width:0}
+.gift .w b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gift .w small{font-size:11px;opacity:.9}
+.gift .e{font-size:26px}
+.gift .x{font-family:var(--font-display);font-size:26px;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+@keyframes giftin{from{transform:translateX(-30px);opacity:0}}
+.gift.out{animation:giftout .3s forwards}
+@keyframes giftout{to{transform:translateX(-30px);opacity:0}}
+
+/* feed */
+#feed{position:absolute;left:12px;right:70px;bottom:calc(66px + env(safe-area-inset-bottom,0px));max-height:36%;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 22%);mask-image:linear-gradient(transparent,#000 22%)}
+.msg{display:flex;gap:7px;align-items:flex-start;animation:msgin .25s ease-out}
+.msg .avatar{width:24px;height:24px;font-size:10px;margin-top:1px}
+.msg p{margin:0;font-size:13px;line-height:1.3;background:rgba(0,0,0,.28);border-radius:12px;padding:5px 10px;text-shadow:0 1px 1px rgba(0,0,0,.5);word-break:break-word}
+.msg p b{color:var(--fg-dim);font-weight:700;margin-right:4px}
+.msg.sys p{background:rgba(94,232,255,.18);color:var(--accent-2)}
+.msg.join p{color:var(--fg-dim);background:transparent;padding-left:0}
+@keyframes msgin{from{transform:translateY(8px);opacity:0}}
+
+/* hearts */
+#hearts{position:absolute;right:14px;bottom:calc(120px + env(safe-area-inset-bottom,0px));width:60px;height:46%;pointer-events:none;overflow:hidden}
+.heart{position:absolute;bottom:0;left:50%;font-size:22px;animation:rise 2.2s ease-out forwards}
+@keyframes rise{0%{transform:translate(-50%,0) scale(.6);opacity:0}15%{opacity:1;transform:translate(-50%,-30px) scale(1)}100%{transform:translate(calc(-50% + var(--dx)),-100%) scale(1.2);opacity:0}}
+
+/* bottom bar */
+#bar{position:absolute;left:0;right:0;bottom:0;padding:0 12px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:center}
+#bar .in{flex:1;background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;padding:10px 14px;color:var(--fg-dim);font-size:13px;font-weight:600}
+#bar .rb{width:40px;height:40px;border-radius:50%;border:0;background:var(--glass);backdrop-filter:blur(10px);font-size:20px;display:grid;place-items:center}
+.likes{position:absolute;right:14px;bottom:calc(66px + env(safe-area-inset-bottom,0px));text-align:center;font-size:11px;font-weight:800;color:var(--fg-dim)}
+
+/* big gift overlay */
+#bigwrap{position:absolute;inset:0;pointer-events:none;display:none;align-items:center;justify-content:center;flex-direction:column;gap:6px}
+#bigwrap.on{display:flex}
+#bigwrap .e{font-size:140px;line-height:1;animation:pop .6s cubic-bezier(.2,1.4,.4,1);filter:drop-shadow(0 10px 30px rgba(255,45,85,.6))}
+#bigwrap .who{font-family:var(--font-display);font-size:34px;letter-spacing:.04em;text-shadow:0 2px 12px rgba(0,0,0,.8);animation:pop .5s .1s both}
+#bigwrap .what{font-weight:800;color:var(--accent);font-size:18px;text-shadow:0 2px 8px rgba(0,0,0,.8);animation:pop .5s .2s both}
+@keyframes pop{from{transform:scale(.2);opacity:0}}
+.conf{position:absolute;top:-20px;font-size:22px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.2}}
+
+/* reveal */
+#reveal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.86);backdrop-filter:blur(14px);text-align:center;padding:24px;z-index:20}
+#reveal.on{display:flex}
+#reveal .k{font-family:var(--font-display);font-size:30px;color:var(--fg-dim);letter-spacing:.06em}
+#reveal .z{font-family:var(--font-display);font-size:140px;line-height:.9;color:var(--live)}
+#reveal p{font-size:18px;font-weight:700;max-width:24ch;margin:12px auto 24px}
+#reveal button{background:var(--fg);color:#000;border:0;border-radius:999px;padding:12px 22px;font-weight:800}
+
+/* ---------- Régie ---------- */
+#regie{position:absolute;left:0;right:0;bottom:0;z-index:30;background:#111118;border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:12px 16px calc(18px + env(safe-area-inset-bottom,0px));transform:translateY(105%);transition:transform .25s;max-height:80%;overflow:auto}
+#regie.on{transform:none}
+#regie h2{font-family:var(--font-display);font-size:22px;letter-spacing:.06em;margin:0 0 10px;display:flex;align-items:center;gap:10px}
+#regie h2 small{font-family:var(--font-ui);font-size:11px;color:var(--fg-dim);letter-spacing:.05em;font-weight:600;margin-left:auto}
+.rg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.rg button{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:12px;padding:12px 10px;font-weight:700;font-size:13px;text-align:left;display:flex;gap:8px;align-items:center}
+.rg button span{font-size:18px}
+.rg button.danger{border-color:rgba(255,45,85,.5);background:rgba(255,45,85,.12)}
+.rg button.full{grid-column:1/-1}
+.rline{display:flex;gap:8px;margin-bottom:8px}
+.rline input{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);font:inherit}
+.rline button{border:0;background:var(--accent);color:#000;border-radius:10px;padding:0 14px;font-weight:800}
+.rstat{display:flex;gap:14px;font-size:12px;color:var(--fg-dim);font-weight:600;margin-bottom:10px}
+.rstat b{color:var(--fg)}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 0;font-size:13px;font-weight:600}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+
+<!-- ================= SETUP ================= -->
+<section id="setup">
+  <h1>FAUX<span>LIVE</span></h1>
+  <p class="sub">Simulateur de live pour prank. Les spectateurs, commentaires et cadeaux sont générés localement. Personne ne regarde.</p>
+
+  <div class="field">
+    <label for="hostname">Ton pseudo à l'écran</label>
+    <input id="hostname" value="guillaume.off" maxlength="24" autocomplete="off">
+  </div>
+
+  <div class="field">
+    <label>Thème du live</label>
+    <div class="themes" id="themes"></div>
+  </div>
+
+  <div class="field">
+    <label>Tes défis / questions préparés</label>
+    <div class="prep" id="prep">
+      <div class="phead"><span>Défi ou question</span><span>Cadeau</span><span>Qté</span><span></span></div>
+      <div id="prows"></div>
+      <button type="button" class="add" id="addprep">+ Ajouter un défi</button>
+    </div>
+    <div class="toggle"><span>Mélanger avec les défis du thème</span><input type="checkbox" id="mixtheme" checked></div>
+  </div>
+
+  <div class="row2">
+    <div class="field">
+      <label for="base">Spectateurs (base)</label>
+      <select id="base">
+        <option value="1200">~1 200</option>
+        <option value="8500">~8 500</option>
+        <option value="24000">~24 000</option>
+        <option value="52000" selected>~52 000</option>
+        <option value="140000">~140 000</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="rythme">Rythme du flux</label>
+      <select id="rythme">
+        <option value="0.6">Calme</option>
+        <option value="1" selected>Normal</option>
+        <option value="1.8">Déchaîné</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Caméra</label>
+    <div class="seg" id="camseg">
+      <button type="button" data-cam="user" aria-pressed="true">Frontale</button>
+      <button type="button" data-cam="environment" aria-pressed="false">Arrière</button>
+      <button type="button" data-cam="none" aria-pressed="false">Sans caméra</button>
+    </div>
+  </div>
+
+  <button class="go" id="go" type="button">Lancer le live</button>
+  <p class="hint"><b>Régie cachée :</b> triple-tap dans le coin haut-gauche de l'écran (sur ton avatar) pendant le live. De là tu déclenches gros cadeaux, défis, pics de spectateurs, commentaires perso, et la révélation finale.</p>
+</section>
+
+<!-- ================= STAGE ================= -->
+<section id="stage">
+  <video id="cam" autoplay playsinline muted></video>
+  <div id="nocam"><div><div class="big">NO CAM</div>Mode démo sans caméra.<br>L'overlay tourne normalement.</div></div>
+  <div class="shade-top"></div><div class="shade-bot"></div>
+
+  <div id="hdr">
+    <div class="host">
+      <div class="avatar" id="hostav" style="background:linear-gradient(135deg,#ff2d55,#ffb02e)">G</div>
+      <div class="n"><b id="hostn">guillaume.off</b><small><span id="likesn" class="tnum">0</span> j'aime</small></div>
+      <button class="follow" type="button">Suivre</button>
+    </div>
+    <div class="pills">
+      <div class="pill live">LIVE</div>
+      <div class="pill"><span>👁</span><span id="viewers" class="tnum">0</span></div>
+      <button id="xbtn" type="button" aria-label="Fermer">×</button>
+    </div>
+  </div>
+  <button id="corner" type="button" aria-label="Régie"></button>
+  <div id="tops"></div>
+
+  <div id="chal"><div class="ic">🎯</div><div class="t"><small>Défi lancé</small><b id="chaltxt"></b><span id="chalby"></span></div><div class="bar" id="chalbar"></div></div>
+
+  <div id="gifts"></div>
+  <div id="feed"></div>
+  <div id="hearts"></div>
+  <div class="likes"><div style="font-size:26px">❤️</div><span id="likes2" class="tnum">0</span></div>
+
+  <div id="bar">
+    <div class="in">Ajouter un commentaire…</div>
+    <button class="rb" type="button" aria-label="Partager">↗</button>
+    <button class="rb" type="button" aria-label="Cadeau">🎁</button>
+  </div>
+
+  <div id="bigwrap"><div class="e" id="bige"></div><div class="who" id="bigwho"></div><div class="what" id="bigwhat"></div></div>
+
+  <div id="reveal">
+    <div>
+      <div class="k">SPECTATEURS RÉELS</div>
+      <div class="z">0</div>
+      <p>C'était un faux live. Personne ne regardait. Tout était généré sur ce téléphone. 😄</p>
+      <button type="button" id="revclose">Retour au menu</button>
+    </div>
+  </div>
+
+  <div id="regie">
+    <h2>RÉGIE <small id="rclock" class="tnum">00:00</small></h2>
+    <div class="rstat"><span>👁 <b id="rview" class="tnum">0</b></span><span>💬 <b id="rmsg" class="tnum">0</b></span><span>🎁 <b id="rgift" class="tnum">0</b></span></div>
+    <div class="rg">
+      <button type="button" data-act="big"><span>🦁</span>Gros cadeau</button>
+      <button type="button" data-act="spike"><span>📈</span>Pic de spectateurs</button>
+      <button type="button" data-act="chal"><span>🎯</span>Défi suivant</button>
+      <button type="button" data-act="rain"><span>🌧</span>Pluie de cadeaux</button>
+      <button type="button" data-act="hype"><span>🔥</span>Hype dans le chat</button>
+      <button type="button" data-act="pause" id="rpause"><span>⏸</span>Pause flux</button>
+    </div>
+    <div class="rline"><input id="rtxt" placeholder="Commentaire perso (envoyé par un faux spectateur)"><button type="button" data-act="say">OK</button></div>
+    <div class="rline"><input id="rchal" placeholder="Défi perso : ex. « Chante le refrain »"><button type="button" data-act="chalc">GO</button></div>
+    <div class="rline" id="rprepline"><select id="rprep" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);font:inherit;font-weight:600"></select><button type="button" data-act="chalp">GO</button></div>
+    <div class="rg">
+      <button type="button" data-act="flip"><span>🔄</span>Inverser caméra</button>
+      <button type="button" data-act="close"><span>▾</span>Fermer régie</button>
+      <button type="button" class="danger full" data-act="reveal"><span>🎬</span>RÉVÉLER — fin du prank</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const fmt=n=>n>=1e6?(n/1e6).toFixed(1).replace('.0','')+'M':n>=1000?(n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k':String(n);
+
+/* ---------- corpus ---------- */
+const THEMES={
+  street:{ic:"🎤",name:"Street",desc:"Micro-trottoir, humour, rencontres",
+    msgs:["mdrrr","il est où là ?","{h} t'es dans quelle ville ?","le mec derrière 😂","fais lui une interview","demande lui son signe astro","PTDRRR","trop drôle ce live","je regarde depuis Lyon 🙌","c'est qui à côté de toi ??","gooo","on veut la suite","{h} best streamer fr","ta tête mdr","jsuis mort","mais il fait quoi là","la personne à côté est trop calme","fais le quizz !!","QUESTION PIÈGE","ça rend bien le fond","salut de Montréal","il/elle a l'air sympa","montre le ciel","toujours aussi fou ce live","y'a du monde ce soir","1er live que je regarde en entier","donne lui le micro","LE SOURIRE 😭","ok ça part en vrille","fais une blague","ptdr le regard","vas-y présente nous","on l'adore déjà","oh il/elle est chou"],
+    chals:["Fais une interview express : 3 questions","Demande son plat préféré","Fais une blague nulle, et il/elle doit noter sur 10","Fais lui deviner ton âge","Imitez un animal ensemble","Chante 5 secondes de n'importe quoi","Demande son conseil de vie","Fais un check compliqué","Raconte ton pire râteau en 20 sec","Faites un selfie pour le chat"]},
+  sport:{ic:"🏋️",name:"Sport",desc:"Défis physiques, chrono, perf",
+    msgs:["ALLEZ","chrono !!","10 pompes go","il/elle tient pas 30 sec","{h} t'es chaud","on veut voir les squats","respire mdr","PAS DE TRICHE","le gainage ou rien","force 💪","je fais le défi en même temps","trop fort","le coach approuve","hydrate toi","{h} forme olympique","encore 5","montre la technique","ça c'est du sport","elle/il va gagner c sûr","t'as vu le chrono ??","plus vite","OUAIS","les abdos sont là","pause ?? jamais","lol le visage","go go go","record du live ?","le dernier était mieux","mdr la pose","on bat le record ce soir"],
+    chals:["10 pompes en moins de 15 sec","Gainage 30 secondes, à deux","Squat challenge : qui tient le plus","Équilibre sur un pied, yeux fermés, 20 sec","Course sur place 30 sec à fond","Fais 5 burpees","Jumping jacks jusqu'au stop du chat","Tenir une chaise invisible 40 sec","Pose de bodybuilder la plus ridicule","Lance quelque chose et rattrape-le 3 fois"]},
+  talk:{ic:"💬",name:"Talk",desc:"Questions, débats, Q&A",
+    msgs:["bonne question","vrai","pas d'accord mdr","{h} ton avis ?","on veut la réponse honnête","réponse en 1 mot","c'est profond là","mdr la gêne","dit lui tout","team pizza","team ananas 🍍 fight","TOP 3 ?","depuis Bruxelles 👋","le silence 😭","oh il/elle réfléchit","on veut l'anecdote","ok respect","jamais vu ça","elle/il a raison","fais le quiz culture G","{h} tu lis le chat ?","hahaha","question suivante","pas de langue de bois","ça débat ici","meilleur film ?","le pire date de ta vie","intéressant","on apprend des trucs","100% d'accord"],
+    chals:["Réponds à 3 questions rapides sans réfléchir","Dis une chose que personne ne sait sur toi","Débat 30 sec : ananas sur pizza","Devine son métier en 3 questions","Donne un compliment sincère","Raconte ta pire gaffe","Chacun donne son top 3 films","Décris ta journée idéale en 15 sec","Quelle est ta plus grande peur ?","Fais lui deviner un mot sans le dire"]}
+};
+const GIFTS=[
+  {e:"❤️",n:"Cœur",v:1,w:40},{e:"🌹",n:"Rose",v:1,w:30},{e:"🍩",n:"Donut",v:5,w:14},{e:"🎀",n:"Ruban",v:10,w:9},
+  {e:"🚀",n:"Fusée",v:50,w:4,t:"mid"},{e:"🎸",n:"Guitare",v:99,w:2,t:"mid"},
+  {e:"🦁",n:"Lion",v:500,w:.6,t:"big"},{e:"🏎️",n:"Bolide",v:1000,w:.3,t:"big"},{e:"🪐",n:"Galaxie",v:2500,w:.1,t:"big"}
+];
+const PRE=["lea","maxou","sarah","tom","inès","nico","camille","yas","jul","emma","lucas","mel","chloé","rayan","manon","hugo","lina","théo","zoé","enzo","anaïs","sam","nour","mathis","jade","kev","alex","romane","yanis","clara","lou","adam","ambre","nathan","eva","dylan","maya","ilyes","louna","noa"];
+const SUF=["","","_","x","s",".off","officiel",".fr","_13","_69","_75","_33","2000","_lol","__","del","ovh",".b","_g","zz"];
+const AVCOL=["#ff2d55","#ffb02e","#5ee8ff","#3ddc84","#b56cff","#ff7a45","#2d8cff","#ff5fa2","#19c7a5","#ffd166"];
+function mkUser(){const p=pick(PRE);const s=pick(SUF);const n=p+s+(Math.random()<.5?ri(1,999):"");return {n:n.toLowerCase(),c:pick(AVCOL),i:p[0].toUpperCase()}}
+const POOL=Array.from({length:260},mkUser);
+const av=(u,cls="")=>`<div class="avatar ${cls}" style="background:${u.c}">${u.i}</div>`;
+
+/* ---------- state ---------- */
+let S=null,timers=[],camStream=null,facing="user";
+let selTheme="street";
+
+/* ---------- setup ui ---------- */
+const tdiv=$("#themes");
+for(const k in THEMES){const t=THEMES[k];const b=document.createElement("button");b.type="button";b.className="theme";b.dataset.t=k;b.setAttribute("aria-pressed",k===selTheme);b.innerHTML=`<div class="ic">${t.ic}</div><b>${t.name}</b><small>${t.desc}</small>`;b.onclick=()=>{selTheme=k;[...tdiv.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.t===k))};tdiv.appendChild(b)}
+$("#camseg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;facing=b.dataset.cam;[...$("#camseg").children].forEach(c=>c.setAttribute("aria-pressed",c===b))});
+try{const saved=localStorage.getItem("fauxlive.host");if(saved)$("#hostname").value=saved}catch(e){}
+
+/* ---------- défis préparés ---------- */
+let PREP=[];
+try{PREP=JSON.parse(localStorage.getItem("fauxlive.prep")||"[]")}catch(e){PREP=[]}
+if(!Array.isArray(PREP))PREP=[];
+if(!PREP.length)PREP=[{t:"Demande son prénom et son signe astro",e:"🌹",q:20},{t:"Fais un check compliqué à deux",e:"🚀",q:5}];
+function savePrep(){try{localStorage.setItem("fauxlive.prep",JSON.stringify(PREP))}catch(e){}}
+function renderPrep(){
+  const w=$("#prows");w.innerHTML="";
+  PREP.forEach((p,i)=>{
+    const r=document.createElement("div");r.className="prow";
+    r.innerHTML=`<input type="text" value="${esc(p.t)}" placeholder="Ex. Chante le refrain" maxlength="80" aria-label="Défi ${i+1}">
+      <input type="text" class="em" value="${esc(p.e)}" maxlength="4" aria-label="Emoji cadeau">
+      <input type="number" class="qt" value="${+p.q||1}" min="1" max="9999" inputmode="numeric" aria-label="Quantité">
+      <button type="button" class="del" aria-label="Supprimer">×</button>`;
+    const [ti,ei,qi,del]=r.children;
+    ti.oninput=()=>{p.t=ti.value;savePrep()};
+    ei.oninput=()=>{p.e=ei.value||"🎁";savePrep()};
+    qi.oninput=()=>{p.q=Math.max(1,+qi.value||1);savePrep()};
+    del.onclick=()=>{PREP.splice(i,1);savePrep();renderPrep()};
+    w.appendChild(r);
+  });
+}
+$("#addprep").onclick=()=>{PREP.push({t:"",e:"🎁",q:10});savePrep();renderPrep();const last=$("#prows").lastElementChild;if(last)last.firstElementChild.focus()};
+try{$("#mixtheme").checked=localStorage.getItem("fauxlive.mix")!=="0"}catch(e){}
+$("#mixtheme").onchange=()=>{try{localStorage.setItem("fauxlive.mix",$("#mixtheme").checked?"1":"0")}catch(e){}};
+renderPrep();
+
+$("#go").onclick=start;
+$("#xbtn").onclick=()=>regie(true);
+$("#revclose").onclick=stop;
+
+/* ---------- live loop ---------- */
+async function start(){
+  const host=($("#hostname").value.trim()||"streamer").slice(0,24);
+  try{localStorage.setItem("fauxlive.host",host)}catch(e){}
+  const base=+$("#base").value, rate=+$("#rythme").value;
+  S={host,theme:THEMES[selTheme],base,rate,viewers:Math.round(base*rnd(.55,.7)),target:base,likes:ri(800,4000),msgs:0,gifts:0,paused:false,chalIdx:0,t0:Date.now(),spike:0,chalTimer:null};
+  $("#hostn").textContent=host;$("#hostav").textContent=host[0].toUpperCase();
+  $("#feed").innerHTML="";$("#gifts").innerHTML="";$("#chal").classList.remove("on");$("#reveal").classList.remove("on");
+  $("#tops").innerHTML=[0,1,2].map(i=>av(POOL[i])).join("");
+  // file de défis : préparés d'abord, puis ceux du thème si demandé
+  const custom=PREP.filter(p=>p.t.trim()).map(p=>({t:p.t.trim(),e:p.e||"🎁",q:+p.q||1}));
+  const themed=$("#mixtheme").checked?S.theme.chals.map(t=>({t})):[];
+  S.queue=custom.concat(themed);
+  const sel=$("#rprep");sel.innerHTML=custom.length?custom.map((c,i)=>`<option value="${i}">${c.e} ×${c.q} · ${esc(c.t)}</option>`).join(""):'<option value="">Aucun défi préparé</option>';
+  $("#rprepline").style.display=custom.length?"":"none";
+  S.custom=custom;
+  $("#setup").style.display="none";$("#stage").classList.add("on");
+  await openCam();
+  sysMsg(`Bienvenue dans le live de ${host} 👋 Soyez respectueux.`);
+  schedule();
+  try{if(navigator.wakeLock)navigator.wakeLock.request("screen").catch(()=>{})}catch(e){}
+}
+function stop(){
+  timers.forEach(clearTimeout);timers=[];
+  if(S&&S.chalTimer)clearTimeout(S.chalTimer);
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
+  $("#stage").classList.remove("on");$("#setup").style.display="";regie(false);S=null;
+}
+async function openCam(){
+  const v=$("#cam");const nc=$("#nocam");
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
+  v.srcObject=null;nc.classList.remove("on");
+  if(facing==="none"||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){nc.classList.add("on");return}
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1920}},audio:false});
+    v.srcObject=camStream;v.classList.toggle("mirror",facing==="user");
+  }catch(e){nc.classList.add("on");nc.querySelector("div").innerHTML=`<div class="big">NO CAM</div>Caméra refusée ou indisponible.<br>Ouvre le fichier en HTTPS ou en local sur le téléphone.`}
+}
+
+function later(fn,ms){const id=setTimeout(()=>{timers=timers.filter(x=>x!==id);if(S)fn()},ms);timers.push(id)}
+function schedule(){
+  // viewers tick
+  (function vt(){if(!S)return;tickViewers();later(vt,900)})();
+  // messages
+  (function mt(){if(!S)return;if(!S.paused)spawnMsg();later(mt,rnd(350,1600)/S.rate)})();
+  // hearts
+  (function ht(){if(!S)return;if(!S.paused){heart();S.likes+=ri(1,7);renderLikes()}later(ht,rnd(250,900)/S.rate)})();
+  // gifts
+  (function gt(){if(!S)return;if(!S.paused)spawnGift();later(gt,rnd(2500,9000)/S.rate)})();
+  // joins
+  (function jt(){if(!S)return;if(!S.paused)joinMsg();later(jt,rnd(4000,12000)/S.rate)})();
+  // auto challenges
+  (function ct(){if(!S)return;if(!S.paused&&!$("#chal").classList.contains("on"))launchChal();later(ct,rnd(45000,90000))})();
+  // clock
+  (function kt(){if(!S)return;const s=Math.floor((Date.now()-S.t0)/1000);$("#rclock").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");later(kt,1000)})();
+}
+function tickViewers(){
+  const drift=S.target-S.viewers;
+  S.viewers+=Math.round(drift*0.08+rnd(-1,1)*S.base*0.004);
+  if(S.spike>0){S.spike--;if(S.spike===0)S.target=Math.round(S.base*rnd(.9,1.1))}
+  else if(Math.random()<.04)S.target=Math.round(S.base*rnd(.8,1.15));
+  S.viewers=Math.max(12,S.viewers);
+  $("#viewers").textContent=fmt(S.viewers);$("#rview").textContent=S.viewers.toLocaleString("fr-FR");
+}
+function renderLikes(){const t=fmt(S.likes);$("#likesn").textContent=t;$("#likes2").textContent=t}
+function pushFeed(html,cls=""){
+  const f=$("#feed");const d=document.createElement("div");d.className="msg "+cls;d.innerHTML=html;f.appendChild(d);
+  while(f.children.length>14)f.removeChild(f.firstChild);
+  S.msgs++;$("#rmsg").textContent=S.msgs;
+}
+function txt(s){return s.replace(/\{h\}/g,"@"+S.host)}
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function spawnMsg(u,m){u=u||pick(POOL);m=m||txt(pick(S.theme.msgs));
+  if(Math.random()<.18)m+=pick([" 😂"," 🔥"," ❤️"," 😭"," 👀"," 💀"," 👏"," 🙌"]);
+  pushFeed(av(u)+`<p><b>${esc(u.n)}</b>${esc(m)}</p>`)}
+function sysMsg(m){pushFeed(`<p>${esc(m)}</p>`,"sys")}
+function joinMsg(){const u=pick(POOL);pushFeed(av(u)+`<p>${esc(u.n)} a rejoint</p>`,"join")}
+function heart(){const h=$("#hearts");const e=document.createElement("div");e.className="heart";e.textContent=pick(["❤️","🧡","💛","💖","🔥","👏"]);e.style.setProperty("--dx",ri(-28,28)+"px");e.style.fontSize=ri(16,28)+"px";h.appendChild(e);setTimeout(()=>e.remove(),2300)}
+function weightedGift(){const tot=GIFTS.reduce((a,g)=>a+g.w,0);let r=Math.random()*tot;for(const g of GIFTS){r-=g.w;if(r<=0)return g}return GIFTS[0]}
+function spawnGift(g,u,count){g=g||weightedGift();u=u||pick(POOL);count=count||(g.t?1:pick([1,1,1,5,10,20,50]));
+  S.gifts++;$("#rgift").textContent=S.gifts;
+  if(g.t==="big"){bigGift(g,u);return}
+  const w=$("#gifts");const d=document.createElement("div");d.className="gift"+(g.t==="mid"?" mid":"");
+  d.innerHTML=av(u)+`<div class="w"><b>${esc(u.n)}</b><small>a envoyé ${g.n}</small></div><div class="e">${g.e}</div><div class="x">×${count}</div>`;
+  w.appendChild(d);while(w.children.length>3)w.removeChild(w.firstChild);
+  setTimeout(()=>{d.classList.add("out");setTimeout(()=>d.remove(),300)},g.t==="mid"?5000:3200);
+  if(g.t==="mid"&&Math.random()<.7)later(()=>spawnMsg(null,pick(["merci "+u.n+" 🙏","wow la fusée","gros gift !!","le chat s'enflamme","oh le cadeau"])),rnd(400,1500));
+}
+function bigGift(g,u){
+  const w=$("#bigwrap");$("#bige").textContent=g.e;$("#bigwho").textContent="@"+u.n;$("#bigwhat").textContent=`a envoyé ${g.n} · ${g.v.toLocaleString("fr-FR")} pièces`;
+  w.classList.remove("on");void w.offsetWidth;w.classList.add("on");
+  for(let i=0;i<28;i++){const c=document.createElement("div");c.className="conf";c.textContent=pick(["🎉","✨","⭐","💫",g.e]);c.style.left=rnd(0,100)+"vw";c.style.animationDuration=rnd(1.8,3.2)+"s";c.style.animationDelay=rnd(0,.8)+"s";$("#stage").appendChild(c);setTimeout(()=>c.remove(),4200)}
+  for(let i=0;i<12;i++)later(heart,i*120);
+  S.spike=8;S.target=Math.round(S.base*rnd(1.25,1.5));
+  later(()=>w.classList.remove("on"),4500);
+  const burst=["OMGGG","UN "+g.n.toUpperCase()+" 😱😱","merci "+u.n+" ❤️","le chat est en feu 🔥","wow wow wow","respect "+u.n,"c'est la folie","jamais vu ça","GROS GIFT","🦁🦁🦁","il/elle a vu ça ??","la réaction mdr"];
+  for(let i=0;i<9;i++)later(()=>spawnMsg(null,pick(burst)),rnd(300,3500));
+}
+function launchChal(item){
+  const u=pick(POOL);
+  if(typeof item==="string")item={t:item};
+  if(!item){if(!S.queue.length)return;item=S.queue[S.chalIdx++%S.queue.length]}
+  const text=item.t;
+  const ge=item.e?item.e:pick(GIFTS.filter(x=>x.v>=10)).e;
+  const gn=(GIFTS.find(x=>x.e===ge)||{}).n||"cadeau";
+  const c=item.q||ri(1,5)*10;
+  $("#chaltxt").textContent=text;$("#chalby").textContent=`par @${u.n} · ${ge} ${gn} ×${c} si c'est fait`;
+  const el=$("#chal");el.classList.add("on");
+  const bar=$("#chalbar");bar.style.transition="none";bar.style.transform="scaleX(1)";void bar.offsetWidth;bar.style.transition="transform 60s linear";bar.style.transform="scaleX(0)";
+  if(S.chalTimer)clearTimeout(S.chalTimer);S.chalTimer=setTimeout(()=>el.classList.remove("on"),60000);
+  sysMsg("🎯 Nouveau défi : "+text);
+  const hype=["FAIS LE","go go go","on veut voir","il/elle doit le faire","DÉFI DÉFI","mdr le défi","j'ajoute 10 roses si c fait","jamais il/elle fait ça","allez courage","le chat vote OUI"];
+  for(let i=0;i<6;i++)later(()=>spawnMsg(null,pick(hype)),rnd(500,5000));
+}
+
+/* ---------- régie ---------- */
+let taps=[];
+$("#corner").addEventListener("click",()=>{const n=Date.now();taps=taps.filter(t=>n-t<700);taps.push(n);if(taps.length>=3){taps=[];regie(true)}});
+function regie(on){$("#regie").classList.toggle("on",on)}
+$("#regie").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-act]");if(!b||!S)return;
+  const a=b.dataset.act;
+  if(a==="big")bigGift(pick(GIFTS.filter(g=>g.t==="big")),pick(POOL));
+  else if(a==="spike"){S.spike=14;S.target=Math.round(S.base*rnd(1.6,2.2));sysMsg("📈 Le live est mis en avant");for(let i=0;i<8;i++)later(joinMsg,i*350)}
+  else if(a==="chal")launchChal();
+  else if(a==="rain"){for(let i=0;i<14;i++)later(()=>spawnGift(pick(GIFTS.filter(g=>!g.t||g.t==="mid"))),i*450)}
+  else if(a==="hype"){for(let i=0;i<16;i++)later(()=>{spawnMsg();heart();heart()},i*180)}
+  else if(a==="pause"){S.paused=!S.paused;$("#rpause").innerHTML=S.paused?"<span>▶</span>Reprendre flux":"<span>⏸</span>Pause flux"}
+  else if(a==="say"){const t=$("#rtxt").value.trim();if(t){spawnMsg(null,t);$("#rtxt").value=""}regie(false)}
+  else if(a==="chalc"){const t=$("#rchal").value.trim();if(t){launchChal(t);$("#rchal").value=""}regie(false)}
+  else if(a==="chalp"){const i=+$("#rprep").value;if(S.custom&&S.custom[i]){launchChal(S.custom[i]);regie(false)}}
+  else if(a==="flip"){facing=facing==="user"?"environment":"user";openCam()}
+  else if(a==="close")regie(false);
+  else if(a==="reveal"){regie(false);S.paused=true;$("#reveal").classList.add("on")}
+});
+})();
+</script>
+</body></html>
