@@ -30,18 +30,23 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #setup .sub{color:var(--fg-dim);margin:0 0 22px;font-weight:500;max-width:34ch}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
 .field label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-dim);font-weight:700}
-.field input,.field select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--fg);font:inherit;font-weight:600}
+.field input,.field select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:0 14px;color:var(--fg);font:inherit;font-weight:600;width:100%;box-sizing:border-box}
+#setup input:not([type=checkbox]),#setup select,#setup .seg,#setup .prow .del,#setup .add{height:46px;box-sizing:border-box}
+#setup .seg button{height:100%}
+#setup input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent)}
+.prow input{padding:0 10px}
+.row2 .field{margin-bottom:16px}
 select{color-scheme:dark;background-color:#15151d}
 select option{background:#15151d;color:#f5f3ff}
 /* défis préparés */
 .prep{display:flex;flex-direction:column;gap:8px}
-.prow{display:grid;grid-template-columns:1fr 52px 58px 36px;gap:6px;align-items:center}
+.prow{display:grid;grid-template-columns:1fr 112px 56px 40px;gap:6px;align-items:center}
 .prow input{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:10px 10px;color:var(--fg);font:inherit;font-weight:600;min-width:0}
-.prow input.em{text-align:center;padding-inline:4px;font-size:18px}
+.prow select.em{background:#15151d;border:1px solid var(--line);border-radius:10px;padding:0 6px;color:var(--fg);font:inherit;font-weight:600;min-width:0}
 .prow input.qt{text-align:center;padding-inline:4px}
-.prow .del{border:0;background:rgba(255,45,85,.18);color:var(--live);border-radius:10px;height:40px;font-weight:800;font-size:18px}
+.prow .del{border:0;background:rgba(255,45,85,.18);color:var(--live);border-radius:10px;font-weight:800;font-size:18px}
 .add{border:1px dashed var(--line);background:transparent;border-radius:10px;padding:10px;font-weight:700;color:var(--fg-dim)}
-.phead{display:grid;grid-template-columns:1fr 52px 58px 36px;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-dim);font-weight:700;text-align:center}
+.phead{display:grid;grid-template-columns:1fr 112px 56px 40px;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-dim);font-weight:700;text-align:center}
 .phead span:first-child{text-align:left}
 .themes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .theme{border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:12px;padding:12px 10px;text-align:left;display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -179,7 +184,7 @@ select option{background:#15151d;color:#f5f3ff}
 
 <!-- ================= SETUP ================= -->
 <section id="setup">
-  <h1>FAUX<span>LIVE</span> <small style="font:600 12px var(--font-ui);color:var(--fg-dim);letter-spacing:.05em;vertical-align:top">v1.6</small></h1>
+  <h1>FAUX<span>LIVE</span> <small style="font:600 12px var(--font-ui);color:var(--fg-dim);letter-spacing:.05em;vertical-align:top">v1.7</small></h1>
   <p class="sub">Simulateur de live pour prank. Les spectateurs, commentaires et cadeaux sont générés localement. Personne ne regarde.</p>
 
   <div class="field">
@@ -195,8 +200,8 @@ select option{background:#15151d;color:#f5f3ff}
   <div class="field">
     <label>Mode du live</label>
     <div class="seg" id="modeseg">
-      <button type="button" data-mode="defi" aria-pressed="true">🎯 Défis du chat</button>
-      <button type="button" data-mode="q" aria-pressed="false">❓ Questions des viewers</button>
+      <button type="button" data-mode="defi" aria-pressed="true">🎯 Défis</button>
+      <button type="button" data-mode="q" aria-pressed="false">❓ Questions viewers</button>
     </div>
   </div>
 
@@ -209,8 +214,8 @@ select option{background:#15151d;color:#f5f3ff}
     </div>
     <div class="toggle"><span id="mixlabel">Mélanger avec les défis du thème</span><input type="checkbox" id="mixtheme" checked></div>
     <div class="row2">
-      <div class="field" style="margin-bottom:0"><label for="chaldur" id="chaldurl">Durée d'un défi (s)</label><input type="number" id="chaldur" value="60" min="10" max="600" inputmode="numeric"></div>
-      <div class="field" style="margin-bottom:0"><label for="chalgap">Délai entre deux (s)</label><input type="number" id="chalgap" value="60" min="5" max="1800" inputmode="numeric"></div>
+      <div class="field"><label for="chaldur" id="chaldurl">Durée d'un défi (s)</label><input type="number" id="chaldur" value="60" min="10" max="600" inputmode="numeric"></div>
+      <div class="field"><label for="chalgap">Délai entre deux (s)</label><input type="number" id="chalgap" value="60" min="5" max="1800" inputmode="numeric"></div>
     </div>
   </div>
 
@@ -343,10 +348,11 @@ const THEMES={
     chals:["Réponds à 3 questions rapides sans réfléchir","Dis une chose que personne ne sait sur toi","Débat 30 sec : ananas sur pizza","Devine son métier en 3 questions","Donne un compliment sincère","Raconte ta pire gaffe","Chacun donne son top 3 films","Décris ta journée idéale en 15 sec","Quelle est ta plus grande peur ?","Fais lui deviner un mot sans le dire"]}
 };
 const GIFTS=[
-  {e:"❤️",n:"Cœur",v:1,w:40},{e:"🌹",n:"Rose",v:1,w:30},{e:"🍩",n:"Donut",v:5,w:14},{e:"🎀",n:"Ruban",v:10,w:9},
-  {e:"🚀",n:"Fusée",v:50,w:4,t:"mid"},{e:"🎸",n:"Guitare",v:99,w:2,t:"mid"},
-  {e:"🦁",n:"Lion",v:500,w:.6,t:"big"},{e:"🏎️",n:"Bolide",v:1000,w:.3,t:"big"},{e:"🪐",n:"Galaxie",v:2500,w:.1,t:"big"}
+  {e:"❤️",n:"Cœur",v:1,w:40},{e:"🌹",n:"Rose",v:1,w:30},{e:"🍩",n:"Donut",v:5,w:14},{e:"🧁",n:"Cupcake",v:5,w:8},{e:"🎀",n:"Ruban",v:10,w:9},{e:"🍾",n:"Champagne",v:20,w:5},{e:"🧸",n:"Nounours",v:30,w:4},
+  {e:"🚀",n:"Fusée",v:50,w:4,t:"mid"},{e:"🎸",n:"Guitare",v:99,w:2,t:"mid"},{e:"💎",n:"Diamant",v:199,w:1.2,t:"mid"},{e:"👑",n:"Couronne",v:299,w:.8,t:"mid"},
+  {e:"🦁",n:"Lion",v:500,w:.6,t:"big"},{e:"🏎️",n:"Bolide",v:1000,w:.3,t:"big"},{e:"🛥️",n:"Yacht",v:1500,w:.15,t:"big"},{e:"🪐",n:"Galaxie",v:2500,w:.1,t:"big"}
 ];
+const giftOptions=sel=>GIFTS.map(g=>`<option value="${g.e}"${g.e===sel?" selected":""}>${g.e} ${g.n}</option>`).join("");
 const PRE=["lea","maxou","sarah","tom","inès","nico","camille","yas","jul","emma","lucas","mel","chloé","rayan","manon","hugo","lina","théo","zoé","enzo","anaïs","sam","nour","mathis","jade","kev","alex","romane","yanis","clara","lou","adam","ambre","nathan","eva","dylan","maya","ilyes","louna","noa"];
 const SUF=["","","_","x","s",".off","officiel",".fr","_13","_69","_75","_33","2000","_lol","__","del","ovh",".b","_g","zz"];
 const AVCOL=["#ff2d55","#ffb02e","#5ee8ff","#3ddc84","#b56cff","#ff7a45","#2d8cff","#ff5fa2","#19c7a5","#ffd166"];
@@ -405,18 +411,18 @@ function renderPrep(){
   PREP.forEach((p,i)=>{
     const r=document.createElement("div");r.className="prow";
     r.innerHTML=`<input type="text" value="${esc(p.t)}" placeholder="${isQ?"Ex. Tu es célibataire ?":"Ex. Chante le refrain"}" maxlength="90" aria-label="${isQ?"Question":"Défi"} ${i+1}">
-      <input type="text" class="em" value="${esc(p.e)}" maxlength="4" aria-label="Emoji cadeau">
+      <select class="em" aria-label="Cadeau">${giftOptions(GIFTS.some(g=>g.e===p.e)?p.e:"🌹")}</select>
       <input type="number" class="qt" value="${+p.q||1}" min="1" max="9999" inputmode="numeric" aria-label="Quantité">
       <button type="button" class="del" aria-label="Supprimer">×</button>`;
     const [ti,ei,qi,del]=r.children;
     ti.oninput=()=>{p.t=ti.value;savePrep()};
-    ei.oninput=()=>{p.e=ei.value||"🎁";savePrep()};
+    ei.onchange=()=>{p.e=ei.value;savePrep()};
     qi.oninput=()=>{p.q=Math.max(1,+qi.value||1);savePrep()};
     del.onclick=()=>{PREP.splice(i,1);savePrep();renderPrep()};
     w.appendChild(r);
   });
 }
-$("#addprep").onclick=()=>{PREP.push({t:"",e:"🎁",q:10});savePrep();renderPrep();const last=$("#prows").lastElementChild;if(last)last.firstElementChild.focus()};
+$("#addprep").onclick=()=>{PREP.push({t:"",e:"🌹",q:10});savePrep();renderPrep();const last=$("#prows").lastElementChild;if(last)last.firstElementChild.focus()};
 $("#modeseg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;mode=b.dataset.mode;PREP=PREPS[mode];try{localStorage.setItem("fauxlive.mode",mode)}catch(x){}[...$("#modeseg").children].forEach(c=>c.setAttribute("aria-pressed",c===b));renderPrep()});
 [...$("#modeseg").children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.mode===mode));
 for(const k of ["chaldur","chalgap"]){try{const v=localStorage.getItem("fauxlive."+k);if(v)$("#"+k).value=v}catch(e){}$("#"+k).addEventListener("change",e=>{try{localStorage.setItem("fauxlive."+k,e.target.value)}catch(x){}})}
